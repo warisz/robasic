@@ -1,0 +1,9 @@
+<mujoco model="cube">
+    <option cone="elliptic" impratio="10"/>
+    <worldbody>
+        <body pos="0.48 -0.13 0">
+            <joint type="free"/>
+            <geom type="box" friction="0.5 0.01 0.01" size="0.025 0.025 0.025" rgba="0 1 0 1"/>
+        </body>
+    </worldbody>
+</mujoco>
