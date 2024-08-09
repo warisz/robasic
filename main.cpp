@@ -124,7 +124,7 @@ int main(int argc, const char** argv) {
 
   char error[1000] = "Could not load binary model";
 
-  m = mj_loadXML("/Users/warisz/Code/robasic/model/scene.xml", 0, error, 1000);
+  m = mj_loadXML("/Users/warisz/Code/robasic/model/bootcamp/ball.xml", 0, error, 1000);
 
   if (!m) {
     mju_error("Load model error: %s", error);
@@ -159,11 +159,14 @@ int main(int argc, const char** argv) {
   glfwSetMouseButtonCallback(window, mouse_button);
   glfwSetScrollCallback(window, scroll);
 
-  d->ctrl[0] = PI/2;
-  d->ctrl[1] = -PI/1.68;
-  d->ctrl[2] = -PI/1.298;
-  d->ctrl[4] = PI/2;
+  // d->ctrl[0] = PI/2;
+  // d->ctrl[1] = -PI/1.68;
+  // d->ctrl[2] = -PI/1.298;
+  // d->ctrl[4] = PI/2;
 
+  m->opt.gravity[2] = -9.8;
+  d->qpos[2] = 1;
+  d->qvel[0]= 1;
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
@@ -174,6 +177,8 @@ int main(int argc, const char** argv) {
     mjtNum simstart = d->time;
     bool set = false;
     bool up = false;
+
+    printf("%f, %f, %f, %f, %f, %f\n", cam.azimuth, cam.elevation, cam.distance, cam.lookat[0], cam.lookat[1], cam.lookat[2]);
 
     //best defaults
     // d->ctrl[0] = PI/2;
@@ -186,18 +191,18 @@ int main(int argc, const char** argv) {
 
 
      while (d->time - simstart < 1.0/60.0) {
-       std::cout << d->qpos[4] << std::endl;
-
-       if (d->qpos[4] <= 1.6 && d->qpos[6]<=0.572) {
-         std::cout << "yes" << std::endl;
-         d->ctrl[6] += 0.001;
-       }
-
-       if(d->qpos[6] >= 0.572 && d->qpos[2] < -PI/6) {
-         std::cout << "closed" << std::endl;
-         d->ctrl[2] += 0.0001;
-
-       }
+       // std::cout << d->qpos[4] << std::endl;
+       //
+       // if (d->qpos[4] <= 1.6 && d->qpos[6]<=0.572) {
+       //   std::cout << "yes" << std::endl;
+       //   d->ctrl[6] += 0.001;
+       // }
+       //
+       // if(d->qpos[6] >= 0.572 && d->qpos[2] < -PI/6) {
+       //   std::cout << "closed" << std::endl;
+       //   d->ctrl[2] += 0.0001;
+       //
+       // }
 
 
 
@@ -234,6 +239,7 @@ int main(int argc, const char** argv) {
     glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
 
     // update scene and render
+    opt.frame = mjFRAME_WORLD;
     mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
 
 
