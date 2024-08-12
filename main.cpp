@@ -102,29 +102,23 @@ void scroll(GLFWwindow* window, double xoffset, double yoffset) {
   mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05*yoffset, &scn, &cam);
 }
 
+void controller(const mjModel* m, mjData* d) {
+  // PD control
+  // 0 = torque actuator
+  // kp = -10
+  // kv = -1
+  // reference point = 0
+  d->ctrl[0] = -10*(d->sensordata[0]-0)-1*(d->sensordata[1]);
+}
 
 // main function
 int main(int argc, const char** argv) {
   using namespace std::this_thread; // sleep_for, sleep_until
   using namespace std::chrono; // nanoseconds, system_clock, seconds
 
-//   // check command-line arguments
-//   if (argc!=2) {
-//     std::printf(" USAGE:  basic modelfile\n");
-//     return 0;
-//   }
-
-//   // load and compile model
-//   char error[1000] = "Could not load binary model";
-//   if (std::strlen(argv[1])>4 && !std::strcmp(argv[1]+std::strlen(argv[1])-4, ".mjb")) {
-//     m = mj_loadModel(argv[1], 0);
-//   } else {
-//     m = mj_loadXML(argv[1], 0, error, 1000);
-//   }
 
   char error[1000] = "Could not load binary model";
-
-  m = mj_loadXML("/Users/warisz/Code/robasic/model/scene.xml", 0, error, 1000);
+  m = mj_loadXML("/Users/warisz/Code/robasic/model/bootcamp/pendulum.xml", 0, error, 1000);
 
   if (!m) {
     mju_error("Load model error: %s", error);
@@ -159,11 +153,10 @@ int main(int argc, const char** argv) {
   glfwSetMouseButtonCallback(window, mouse_button);
   glfwSetScrollCallback(window, scroll);
 
-  d->ctrl[0] = PI/2;
-  d->ctrl[1] = -PI/1.68;
-  d->ctrl[2] = -PI/1.298;
-  d->ctrl[4] = PI/2;
-
+  cam.distance = 5;
+  cam.elevation = -30;
+  d->qpos[0] = 1.57;
+  mjcb_control = controller;
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
@@ -172,60 +165,8 @@ int main(int argc, const char** argv) {
     //  this loop will finish on time for the next frame to be rendered at 60 fps.
     //  Otherwise add a cpu timer and exit this loop when it is time to render.
     mjtNum simstart = d->time;
-    bool set = false;
-    bool up = false;
 
-    //best defaults
-    // d->ctrl[0] = PI/2;
-    // d->ctrl[1] = -PI/4;
-    // d->ctrl[2] = -PI/2;
-    // d->ctrl[3] = -PI + PI/2;
-    // d->ctrl[4] = PI/2;
-    // d->ctrl[6] = 0;
-
-
-
-     while (d->time - simstart < 1.0/60.0) {
-       std::cout << d->qpos[4] << std::endl;
-
-       if (d->qpos[4] <= 1.6 && d->qpos[6]<=0.572) {
-         std::cout << "yes" << std::endl;
-         d->ctrl[6] += 0.001;
-       }
-
-       if(d->qpos[6] >= 0.572 && d->qpos[2] < -PI/6) {
-         std::cout << "closed" << std::endl;
-         d->ctrl[2] += 0.0001;
-
-       }
-
-
-
-
-      //
-      // if(!set && d->ctrl[1] < 0.35) {
-      //   d->ctrl[1] += 0.001;
-      // }
-      //
-      // if(!set && d->ctrl[3] < 0.3) {
-      //   d->ctrl[3] += 0.001;
-      // }else {
-      //   set = true;
-      // }
-
-      // close end effector (maxrange 255)
-      // if(set && d->ctrl[7] < 130) {
-      //   d->ctrl[7] += 0.1;
-      // }
-      //
-      // if(d->ctrl[7] > 130) {
-      //   std::cout << "s" << std::endl;
-      //   d->ctrl[1] -= 0.00125;
-      //   d->ctrl[3] -= 0.00125;
-      // }
-      // std::cout << set << std::endl;
-      //
-      // std::cout << d->ctrl[7] << std::endl;
+    while (d->time - simstart < 1.0/60.0) {
       mj_step(m, d);
     }
 
