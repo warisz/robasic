@@ -159,12 +159,6 @@ int main(int argc, const char** argv) {
   glfwSetMouseButtonCallback(window, mouse_button);
   glfwSetScrollCallback(window, scroll);
 
-  d->ctrl[0] = PI/2;
-  d->ctrl[1] = -PI/1.68;
-  d->ctrl[2] = -PI/1.298;
-  d->ctrl[4] = PI/2;
-
-
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
     // advance interactive simulation for 1/60 sec
@@ -172,60 +166,8 @@ int main(int argc, const char** argv) {
     //  this loop will finish on time for the next frame to be rendered at 60 fps.
     //  Otherwise add a cpu timer and exit this loop when it is time to render.
     mjtNum simstart = d->time;
-    bool set = false;
-    bool up = false;
-
-    //best defaults
-    // d->ctrl[0] = PI/2;
-    // d->ctrl[1] = -PI/4;
-    // d->ctrl[2] = -PI/2;
-    // d->ctrl[3] = -PI + PI/2;
-    // d->ctrl[4] = PI/2;
-    // d->ctrl[6] = 0;
-
-
 
      while (d->time - simstart < 1.0/60.0) {
-       std::cout << d->qpos[4] << std::endl;
-
-       if (d->qpos[4] <= 1.6 && d->qpos[6]<=0.572) {
-         std::cout << "yes" << std::endl;
-         d->ctrl[6] += 0.001;
-       }
-
-       if(d->qpos[6] >= 0.572 && d->qpos[2] < -PI/6) {
-         std::cout << "closed" << std::endl;
-         d->ctrl[2] += 0.0001;
-
-       }
-
-
-
-
-      //
-      // if(!set && d->ctrl[1] < 0.35) {
-      //   d->ctrl[1] += 0.001;
-      // }
-      //
-      // if(!set && d->ctrl[3] < 0.3) {
-      //   d->ctrl[3] += 0.001;
-      // }else {
-      //   set = true;
-      // }
-
-      // close end effector (maxrange 255)
-      // if(set && d->ctrl[7] < 130) {
-      //   d->ctrl[7] += 0.1;
-      // }
-      //
-      // if(d->ctrl[7] > 130) {
-      //   std::cout << "s" << std::endl;
-      //   d->ctrl[1] -= 0.00125;
-      //   d->ctrl[3] -= 0.00125;
-      // }
-      // std::cout << set << std::endl;
-      //
-      // std::cout << d->ctrl[7] << std::endl;
       mj_step(m, d);
     }
 
