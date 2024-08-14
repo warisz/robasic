@@ -102,7 +102,12 @@ void scroll(GLFWwindow* window, double xoffset, double yoffset) {
   mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05*yoffset, &scn, &cam);
 }
 
+int forward_kinematics(mjData* d) {
+  // we know the arm is 6dof
+  // FK will calculate cartesian coordinates of the end effector (wrist)
 
+
+}
 // main function
 int main(int argc, const char** argv) {
   using namespace std::this_thread; // sleep_for, sleep_until
