@@ -20,6 +20,8 @@
 
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
+#include <iostream>
+
 
 // MuJoCo data structures
 mjModel* m = NULL;                  // MuJoCo model
@@ -124,7 +126,7 @@ int main(int argc, const char** argv) {
 
   char error[1000] = "Could not load binary model";
 
-  m = mj_loadXML("/Users/warisz/Code/robasic/model/scene.xml", 0, error, 1000);
+  m = mj_loadXML("/Users/warisz/Code/robasic/model/skydio_x2/scene.xml", 0, error, 1000);
 
   if (!m) {
     mju_error("Load model error: %s", error);
@@ -159,6 +161,11 @@ int main(int argc, const char** argv) {
   glfwSetMouseButtonCallback(window, mouse_button);
   glfwSetScrollCallback(window, scroll);
 
+
+  printf("%f",cam.azimuth);
+  cam.azimuth = 0;
+
+
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
     // advance interactive simulation for 1/60 sec
@@ -168,6 +175,18 @@ int main(int argc, const char** argv) {
     mjtNum simstart = d->time;
 
      while (d->time - simstart < 1.0/60.0) {
+
+      // ref = 1m
+       int curr_height = d->geom_xpos[5];
+       std::cout << curr_height << std::endl;
+
+       double error = 2 - curr_height;
+       int thrust_force = 2 * error;
+       d->ctrl[0] = thrust_force;
+       d->ctrl[1] = thrust_force;
+       d->ctrl[2] = thrust_force;
+       d->ctrl[3] = thrust_force;
+
       mj_step(m, d);
     }
 
