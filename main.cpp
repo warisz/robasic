@@ -165,6 +165,7 @@ int main(int argc, const char** argv) {
   printf("%f",cam.azimuth);
   cam.azimuth = 0;
 
+  double integral_sum = 0;
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
@@ -177,11 +178,15 @@ int main(int argc, const char** argv) {
      while (d->time - simstart < 1.0/60.0) {
 
       // ref = 1m
-       int curr_height = d->geom_xpos[5];
-       std::cout << curr_height << std::endl;
+       double curr_height = d->geom_xpos[5];
+       // std::cout << curr_height << std::endl;
 
        double error = 2 - curr_height;
-       int thrust_force = 2 * error;
+
+       integral_sum += error/60;
+       std::cout << integral_sum << std::endl;
+
+       double thrust_force = (2 * error) + 0.1*integral_sum;
        d->ctrl[0] = thrust_force;
        d->ctrl[1] = thrust_force;
        d->ctrl[2] = thrust_force;
