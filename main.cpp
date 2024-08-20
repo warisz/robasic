@@ -38,6 +38,7 @@ bool button_right =  false;
 double lastx = 0;
 double lasty = 0;
 double PI = 3.14;
+double thrust_adj[4] = {0, 0, 0, 0};
 
 
 // keyboard callback
@@ -46,6 +47,37 @@ void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
   if (act==GLFW_PRESS && key==GLFW_KEY_BACKSPACE) {
     mj_resetData(m, d);
     mj_forward(m, d); // does not use integration - does not update position/velocity of points, but does update stuff like forces?
+  }
+
+  else if(act==GLFW_PRESS && key==GLFW_KEY_W) {
+    printf("\n---------------W------------------");
+    thrust_adj[0] -= 0.0001;
+    thrust_adj[1] -= 0.0001;
+    thrust_adj[2] += 0.0001;
+    thrust_adj[3] += 0.0001;
+  }
+  else if(act==GLFW_PRESS && key==GLFW_KEY_S) {
+    printf("\n---------------W------------------");
+    thrust_adj[0] += 0.0001;
+    thrust_adj[1] += 0.0001;
+    thrust_adj[2] -= 0.0001;
+    thrust_adj[3] -= 0.0001;
+  }
+  else if(act==GLFW_PRESS && key==GLFW_KEY_A) {
+    printf("\n---------------W------------------");
+    thrust_adj[1] += 0.0001;
+    thrust_adj[2] += 0.0001;
+
+    thrust_adj[0] -= 0.0001;
+    thrust_adj[3] -= 0.0001;
+  }
+  else if(act==GLFW_PRESS && key==GLFW_KEY_D) {
+    printf("\n---------------W------------------");
+    thrust_adj[0] += 0.0001;
+    thrust_adj[3] += 0.0001;
+
+    thrust_adj[1] -= 0.0001;
+    thrust_adj[2] -= 0.0001;
   }
 }
 
@@ -162,10 +194,13 @@ int main(int argc, const char** argv) {
   glfwSetScrollCallback(window, scroll);
 
 
-  printf("%f",cam.azimuth);
-  cam.azimuth = 0;
+  // printf("%f",cam.distance);
+  cam.azimuth = 180;
+  cam.distance = 10;
+  // cam.lookat[2] = 2;
 
   double integral_sum = 0;
+  double last_error = 0;
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
@@ -179,18 +214,28 @@ int main(int argc, const char** argv) {
 
       // ref = 1m
        double curr_height = d->geom_xpos[5];
+       printf("%f\n", curr_height);
        // std::cout << curr_height << std::endl;
+       // std::cout << d->qvel[2] << std::endl;
 
        double error = 2 - curr_height;
-
        integral_sum += error/60;
-       std::cout << integral_sum << std::endl;
 
-       double thrust_force = (2 * error) + 0.1*integral_sum;
-       d->ctrl[0] = thrust_force;
-       d->ctrl[1] = thrust_force;
-       d->ctrl[2] = thrust_force;
-       d->ctrl[3] = thrust_force;
+       // 2 0.5 0.5
+       double K_p = 3;
+       double K_i = 0;
+       double K_d = 10000;
+
+       double base_thrust = K_p*error + K_i*integral_sum + K_d*(error - last_error)/60;
+       // printf("%f\n", error);
+       // printf("%f\n\n", last_error);
+
+       last_error = error;
+
+       d->ctrl[0] = base_thrust + thrust_adj[0];
+       d->ctrl[1] = base_thrust + thrust_adj[1];
+       d->ctrl[2] = base_thrust + thrust_adj[2];
+       d->ctrl[3] = base_thrust + thrust_adj[3];
 
       mj_step(m, d);
     }
