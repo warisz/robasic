@@ -39,7 +39,10 @@ double lastx = 0;
 double lasty = 0;
 double PI = 3.14;
 double thrust_adj[4] = {0, 0, 0, 0};
+bool up = false, down = false, left = false, right = false;
 
+
+double MAX_VEL = 0.05;
 
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
@@ -49,22 +52,33 @@ void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
     mj_forward(m, d); // does not use integration - does not update position/velocity of points, but does update stuff like forces?
   }
 
-  else if(act==GLFW_PRESS && key==GLFW_KEY_W) {
-    printf("\n---------------W------------------");
-    thrust_adj[0] -= 0.0001;
-    thrust_adj[1] -= 0.0001;
-    thrust_adj[2] += 0.0001;
-    thrust_adj[3] += 0.0001;
+  if (key == GLFW_KEY_W) {
+    if(act == GLFW_PRESS) {
+      printf("\n---------------up------------------");
+      up = true;
+
+      thrust_adj[0] -= 0.0001;
+      thrust_adj[1] -= 0.0001;
+      thrust_adj[2] += 0.0001;
+      thrust_adj[3] += 0.0001;
+
+
+      printf("%f", thrust_adj[2]);
+    }else if (act == GLFW_RELEASE) {
+      up = false;
+
+    }
   }
+
   else if(act==GLFW_PRESS && key==GLFW_KEY_S) {
-    printf("\n---------------W------------------");
+    printf("\n---------------S------------------");
     thrust_adj[0] += 0.0001;
     thrust_adj[1] += 0.0001;
     thrust_adj[2] -= 0.0001;
     thrust_adj[3] -= 0.0001;
   }
   else if(act==GLFW_PRESS && key==GLFW_KEY_A) {
-    printf("\n---------------W------------------");
+    printf("\n---------------A------------------");
     thrust_adj[1] += 0.0001;
     thrust_adj[2] += 0.0001;
 
@@ -72,7 +86,7 @@ void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
     thrust_adj[3] -= 0.0001;
   }
   else if(act==GLFW_PRESS && key==GLFW_KEY_D) {
-    printf("\n---------------W------------------");
+    printf("\n---------------D------------------");
     thrust_adj[0] += 0.0001;
     thrust_adj[3] += 0.0001;
 
@@ -194,13 +208,17 @@ int main(int argc, const char** argv) {
   glfwSetScrollCallback(window, scroll);
 
 
-  // printf("%f",cam.distance);
+  // printf("%f", cam.distance);
   cam.azimuth = 180;
   cam.distance = 10;
   // cam.lookat[2] = 2;
 
   double integral_sum = 0;
-  double last_error = 0;
+  double z_last_error = 0;
+
+  double desired_z = 3;
+  double desired_y = 0;
+  double desired_x = 0;
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
@@ -211,27 +229,48 @@ int main(int argc, const char** argv) {
     mjtNum simstart = d->time;
 
      while (d->time - simstart < 1.0/60.0) {
-
       // ref = 1m
-       double curr_height = d->geom_xpos[5];
-       printf("%f\n", curr_height);
+       double curr_z = d->geom_xpos[17];
+       double curr_y = d->geom_xpos[16];
+       double curr_x = d->geom_xpos[15];
+
+       printf("%f\n", curr_x);
        // std::cout << curr_height << std::endl;
        // std::cout << d->qvel[2] << std::endl;
 
-       double error = 2 - curr_height;
-       integral_sum += error/60;
+       double z_error = desired_z - curr_z;
+       double y_error = desired_y - curr_y;
+       double x_error = desired_x - curr_x;
+
+
+       integral_sum += z_error/60;
+
+       // if(up == true) {
+       //   desired_y += MAX_VEL * (1/60);
+       //   // thrust_adj[0] -= 0.0001;
+       //   // thrust_adj[1] -= 0.0001;
+       //   // thrust_adj[2] += 0.0001;
+       //   // thrust_adj[3] += 0.0001;
+       // }
 
        // 2 0.5 0.5
        double K_p = 3;
        double K_i = 0;
        double K_d = 10000;
 
-       double base_thrust = K_p*error + K_i*integral_sum + K_d*(error - last_error)/60;
-       // printf("%f\n", error);
+       double base_thrust = K_p*z_error + K_i*integral_sum + K_d*(z_error - z_last_error)/60;
+
+       // printf("%f\n", curr_x);
        // printf("%f\n\n", last_error);
 
-       last_error = error;
+       // thrust_adj[0] = 0.01*y_error;
+       // thrust_adj[3] = 0.01*y_error;
+       // thrust_adj[2] = -K_p*y_error;
+       // thrust_adj[3] = -K_p*y_error;
 
+       z_last_error = z_error;
+
+       // printf("%f", thrust_adj[0]);
        d->ctrl[0] = base_thrust + thrust_adj[0];
        d->ctrl[1] = base_thrust + thrust_adj[1];
        d->ctrl[2] = base_thrust + thrust_adj[2];
