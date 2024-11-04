@@ -8,11 +8,5 @@
             <geom type="box" size="0.1 0.1 0.1" rgba="0 0 1 1"/>
         </body>
 
-        <body pos="-0.075 0 0.1">
-            <joint type="free"/>
-            <geom type="box" size="0.1 0.1 0.1" rgba="1 0 0 1"/>
-        </body>
-
-        <geom type="plane" size="1 1 0.1" rgba="0 1 0 1"/>
     </worldbody>
 </mujoco>

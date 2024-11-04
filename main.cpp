@@ -38,11 +38,26 @@ bool button_right =  false;
 double lastx = 0;
 double lasty = 0;
 double PI = 3.14;
-double thrust_adj[4] = {0, 0, 0, 0};
-bool up = false, down = false, left = false, right = false;
 
+double throttle_adj = 0;
+double roll_adj = 0;
+double pitch_adj = 0;
+double yaw_adj = 0;
 
-double MAX_VEL = 0.05;
+double desired_z = 2;
+double desired_y = 0;
+double desired_x = 0;
+
+// triggers
+bool throttle_up = false;
+bool throttle_down = false;
+bool yaw_left = false;
+bool yaw_right = false;
+bool pitch_up = false;
+bool pitch_down = false;
+bool roll_left = false;
+bool roll_right = false;
+
 
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
@@ -52,46 +67,118 @@ void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
     mj_forward(m, d); // does not use integration - does not update position/velocity of points, but does update stuff like forces?
   }
 
-  if (key == GLFW_KEY_W) {
-    if(act == GLFW_PRESS) {
-      printf("\n---------------up------------------");
-      up = true;
-
-      thrust_adj[0] -= 0.0001;
-      thrust_adj[1] -= 0.0001;
-      thrust_adj[2] += 0.0001;
-      thrust_adj[3] += 0.0001;
-
-
-      printf("%f", thrust_adj[2]);
-    }else if (act == GLFW_RELEASE) {
-      up = false;
-
-    }
+  // LEFT PAD
+  // throttle up
+  if (act==GLFW_PRESS && key == GLFW_KEY_W) {
+    throttle_up = true;
   }
 
-  else if(act==GLFW_PRESS && key==GLFW_KEY_S) {
-    printf("\n---------------S------------------");
-    thrust_adj[0] += 0.0001;
-    thrust_adj[1] += 0.0001;
-    thrust_adj[2] -= 0.0001;
-    thrust_adj[3] -= 0.0001;
+  if (act==GLFW_RELEASE && key == GLFW_KEY_W) {
+    throttle_up = false;
   }
-  else if(act==GLFW_PRESS && key==GLFW_KEY_A) {
-    printf("\n---------------A------------------");
-    thrust_adj[1] += 0.0001;
-    thrust_adj[2] += 0.0001;
 
-    thrust_adj[0] -= 0.0001;
-    thrust_adj[3] -= 0.0001;
+  if (throttle_up) {
+    desired_z += 0.1;
   }
-  else if(act==GLFW_PRESS && key==GLFW_KEY_D) {
-    printf("\n---------------D------------------");
-    thrust_adj[0] += 0.0001;
-    thrust_adj[3] += 0.0001;
 
-    thrust_adj[1] -= 0.0001;
-    thrust_adj[2] -= 0.0001;
+  // throttle down
+  if (act==GLFW_PRESS && key == GLFW_KEY_S) {
+    throttle_down = true;
+  }
+
+  if (act==GLFW_RELEASE && key == GLFW_KEY_S) {
+    throttle_down = false;
+  }
+
+  if (throttle_down) {
+    desired_z -= 0.1;
+  }
+
+  // yaw left
+  if (act==GLFW_PRESS && key == GLFW_KEY_A) {
+    yaw_left = true;
+  }
+
+  if (act==GLFW_RELEASE && key == GLFW_KEY_A) {
+    yaw_left = false;
+  }
+
+  if (yaw_left) {
+    d->qvel[5] += 0.2;
+  }
+
+ // yaw right
+  if (act==GLFW_PRESS && key == GLFW_KEY_D) {
+    yaw_right = true;
+  }
+
+  if (act==GLFW_RELEASE && key == GLFW_KEY_D) {
+    yaw_right = false;
+  }
+
+  if (yaw_right) {
+    d->qvel[5] -= 0.2;
+  }
+
+  if (!yaw_left && !yaw_right){
+    d->qvel[5] = 0;
+  }
+
+  // RIGHT PAD
+  // pitch up
+  if (act==GLFW_PRESS && key == GLFW_KEY_I) {
+    pitch_up = true;
+  }
+
+  if (act==GLFW_RELEASE && key == GLFW_KEY_I) {
+    pitch_up = false;
+  }
+
+  if (pitch_up) {
+    pitch_adj += 0.0001;
+  }
+
+  // pitch down
+  if (act==GLFW_PRESS && key == GLFW_KEY_K) {
+    pitch_down = true;
+  }
+
+  if (act==GLFW_RELEASE && key == GLFW_KEY_K) {
+    pitch_down = false;
+  }
+
+  if (pitch_down) {
+    pitch_adj -= 0.0001;
+  }
+
+  // roll left
+  if (act==GLFW_PRESS && key == GLFW_KEY_J) {
+    roll_left = true;
+  }
+
+  if (act==GLFW_RELEASE && key == GLFW_KEY_J) {
+    roll_left = false;
+  }
+
+  if (roll_left) {
+    roll_adj -= 0.0001;
+  }
+
+  // roll right
+  if (act==GLFW_PRESS && key == GLFW_KEY_L) {
+    roll_right = true;
+  }
+
+  if (act==GLFW_RELEASE && key == GLFW_KEY_L) {
+    roll_right = false;
+  }
+
+  if (roll_right) {
+    roll_adj += 0.0001;
+  }
+
+  if (!roll_right && !roll_left) {
+    roll_adj = 0;
   }
 }
 
@@ -197,6 +284,10 @@ int main(int argc, const char** argv) {
   mjv_defaultScene(&scn);
   mjr_defaultContext(&con);
 
+  cam.type = mjCAMERA_TRACKING; // Set to tracking mode
+  cam.trackbodyid = 0;
+
+
   // create scene and context
   mjv_makeScene(m, &scn, 2000);
   mjr_makeContext(m, &con, mjFONTSCALE_150);
@@ -216,9 +307,7 @@ int main(int argc, const char** argv) {
   double integral_sum = 0;
   double z_last_error = 0;
 
-  double desired_z = 3;
-  double desired_y = 0;
-  double desired_x = 0;
+
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
@@ -230,51 +319,36 @@ int main(int argc, const char** argv) {
 
      while (d->time - simstart < 1.0/60.0) {
       // ref = 1m
-       double curr_z = d->geom_xpos[17];
-       double curr_y = d->geom_xpos[16];
-       double curr_x = d->geom_xpos[15];
+       double curr_z = d->qpos[2];
+       double curr_y = d->qpos[1];
+       double curr_x = d->qpos[0];
 
-       printf("%f\n", curr_x);
+       // printf("%f\n", curr_z);
        // std::cout << curr_height << std::endl;
        // std::cout << d->qvel[2] << std::endl;
 
-       double z_error = desired_z - curr_z;
+       double z_error = desired_z - curr_z; // why is it off by 1.084??
        double y_error = desired_y - curr_y;
        double x_error = desired_x - curr_x;
 
 
        integral_sum += z_error/60;
 
-       // if(up == true) {
-       //   desired_y += MAX_VEL * (1/60);
-       //   // thrust_adj[0] -= 0.0001;
-       //   // thrust_adj[1] -= 0.0001;
-       //   // thrust_adj[2] += 0.0001;
-       //   // thrust_adj[3] += 0.0001;
-       // }
-
        // 2 0.5 0.5
-       double K_p = 3;
-       double K_i = 0;
-       double K_d = 10000;
+       double K_p = 2;
+       double K_i = 0.5;
+       double K_d = 0.5;
 
        double base_thrust = K_p*z_error + K_i*integral_sum + K_d*(z_error - z_last_error)/60;
-
-       // printf("%f\n", curr_x);
-       // printf("%f\n\n", last_error);
-
-       // thrust_adj[0] = 0.01*y_error;
-       // thrust_adj[3] = 0.01*y_error;
-       // thrust_adj[2] = -K_p*y_error;
-       // thrust_adj[3] = -K_p*y_error;
 
        z_last_error = z_error;
 
        // printf("%f", thrust_adj[0]);
-       d->ctrl[0] = base_thrust + thrust_adj[0];
-       d->ctrl[1] = base_thrust + thrust_adj[1];
-       d->ctrl[2] = base_thrust + thrust_adj[2];
-       d->ctrl[3] = base_thrust + thrust_adj[3];
+       d->ctrl[0] = base_thrust + roll_adj - pitch_adj;
+       d->ctrl[1] = base_thrust - roll_adj - pitch_adj;
+       d->ctrl[2] = base_thrust - roll_adj + pitch_adj;
+       d->ctrl[3] = base_thrust + roll_adj + pitch_adj;
+       printf("%f\n", curr_z);
 
       mj_step(m, d);
     }
@@ -285,7 +359,7 @@ int main(int argc, const char** argv) {
 
     // update scene and render
     mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
-
+    mjv_moveCamera(m, mjCAMERA_TRACKING, 0, 0, &scn, &cam);
 
     mjr_render(viewport, &scn, &con);
 
