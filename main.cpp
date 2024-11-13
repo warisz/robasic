@@ -15,12 +15,17 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
-#include <chrono>
-#include <thread>
 
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
+#include <matplot/matplot.h>
+#include <cmath>
+
 #include <iostream>
+#include <fstream>
+#include <chrono>
+#include <thread>
+
 
 
 // MuJoCo data structures
@@ -44,7 +49,7 @@ double roll_adj = 0;
 double pitch_adj = 0;
 double yaw_adj = 0;
 
-double desired_z = 2;
+double desired_z = 4;
 double desired_y = 0;
 double desired_x = 0;
 
@@ -58,6 +63,8 @@ bool pitch_down = false;
 bool roll_left = false;
 bool roll_right = false;
 
+#include <cmath>
+#include <matplot/matplot.h>
 
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
@@ -243,6 +250,13 @@ int main(int argc, const char** argv) {
   using namespace std::this_thread; // sleep_for, sleep_until
   using namespace std::chrono; // nanoseconds, system_clock, seconds
 
+  std::ofstream outfile("/Users/warisz/Code/robasic/data.txt", std::ios::trunc); // Open file in append mode
+
+  if (!outfile.is_open()) {
+    std::cerr << "Error opening file!" << std::endl;
+    return 1;
+  }
+
 //   // check command-line arguments
 //   if (argc!=2) {
 //     std::printf(" USAGE:  basic modelfile\n");
@@ -336,8 +350,8 @@ int main(int argc, const char** argv) {
 
        // 2 0.5 0.5
        double K_p = 2;
-       double K_i = 0.5;
-       double K_d = 0.5;
+       double K_i = 0.1;
+       double K_d = 5000;
 
        double base_thrust = K_p*z_error + K_i*integral_sum + K_d*(z_error - z_last_error)/60;
 
@@ -348,9 +362,10 @@ int main(int argc, const char** argv) {
        d->ctrl[1] = base_thrust - roll_adj - pitch_adj;
        d->ctrl[2] = base_thrust - roll_adj + pitch_adj;
        d->ctrl[3] = base_thrust + roll_adj + pitch_adj;
-       printf("%f\n", curr_z);
-
-      mj_step(m, d);
+       printf("%f\n", z_error);
+       outfile << curr_z << "\n"; // Write data
+       outfile.flush(); // Ensure data is written immediately
+       mj_step(m, d);
     }
 
     // get framebuffer viewport
@@ -384,3 +399,24 @@ int main(int argc, const char** argv) {
 
   return 1;
 }
+
+// int main() {
+//   std::ofstream outfile("/Users/warisz/Code/robasic/data.txt", std::ios::trunc); // Open file in append mode
+//
+//
+//
+//   // Simulate real-time data writing
+//   for (int i = 0; i < 100; ++i) {
+//     if(i%2==0) {
+//       outfile << i << "\n"; // Write data
+//     }
+//     else {
+//       outfile << -i << "\n"; // Write data
+//     }
+//     outfile.flush(); // Ensure data is written immediately
+//     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Simulate delay
+//   }
+//
+//   outfile.close(); // Close the file
+//   return 0;
+// }
