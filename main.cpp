@@ -321,8 +321,6 @@ int main(int argc, const char** argv) {
   double integral_sum = 0;
   double z_last_error = 0;
 
-
-
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
     // advance interactive simulation for 1/60 sec
@@ -332,6 +330,7 @@ int main(int argc, const char** argv) {
     mjtNum simstart = d->time;
 
      while (d->time - simstart < 1.0/60.0) {
+       printf("%f\n", d->time - simstart);
       // ref = 1m
        double curr_z = d->qpos[2];
        double curr_y = d->qpos[1];
@@ -341,15 +340,14 @@ int main(int argc, const char** argv) {
        // std::cout << curr_height << std::endl;
        // std::cout << d->qvel[2] << std::endl;
 
-       double z_error = desired_z - curr_z; // why is it off by 1.084??
+       double z_error = desired_z - curr_z;
        double y_error = desired_y - curr_y;
        double x_error = desired_x - curr_x;
 
 
        integral_sum += z_error/60;
 
-       // 2 0.5 0.5
-       double K_p = 2;
+       double K_p = 2.5;
        double K_i = 0.1;
        double K_d = 5000;
 
@@ -362,7 +360,7 @@ int main(int argc, const char** argv) {
        d->ctrl[1] = base_thrust - roll_adj - pitch_adj;
        d->ctrl[2] = base_thrust - roll_adj + pitch_adj;
        d->ctrl[3] = base_thrust + roll_adj + pitch_adj;
-       printf("%f\n", z_error);
+       // printf("%f\n", z_error);
        outfile << curr_z << "\n"; // Write data
        outfile.flush(); // Ensure data is written immediately
        mj_step(m, d);
@@ -399,24 +397,3 @@ int main(int argc, const char** argv) {
 
   return 1;
 }
-
-// int main() {
-//   std::ofstream outfile("/Users/warisz/Code/robasic/data.txt", std::ios::trunc); // Open file in append mode
-//
-//
-//
-//   // Simulate real-time data writing
-//   for (int i = 0; i < 100; ++i) {
-//     if(i%2==0) {
-//       outfile << i << "\n"; // Write data
-//     }
-//     else {
-//       outfile << -i << "\n"; // Write data
-//     }
-//     outfile.flush(); // Ensure data is written immediately
-//     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Simulate delay
-//   }
-//
-//   outfile.close(); // Close the file
-//   return 0;
-// }
