@@ -8,11 +8,11 @@ y_data = []
 # Create a figure and axis for plotting
 fig, ax = plt.subplots()
 line, = ax.plot([], [], lw=2)  # Unpack the first element from the list returned by plot()
-ax.set_xlim(0, 10000)  # Set x-axis limits (adjust as needed)
+ax.set_xlim(0, 5000)  # Set x-axis limits (adjust as needed)
 ax.set_ylim(0, 8)  # Set y-axis limits (adjust as needed)
-ax.set_xlabel('Time (s)')
-ax.set_ylabel('Value')
-ax.set_title('Real-Time Data Plot')
+ax.set_xlabel('Time (ms)')
+ax.set_ylabel('Altitude (m)')
+ax.set_title('PID Controller Settling Response')
 
 def init():
     """Initialize the background of the plot."""

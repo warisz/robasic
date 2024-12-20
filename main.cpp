@@ -347,10 +347,9 @@ int main(int argc, const char** argv) {
 
        integral_sum += z_error/60;
 
-       // 2 0.1 5000
-       double K_p = 10;
+       double K_p = 2.5;
        double K_i = 0.1;
-       double K_d = 0;
+       double K_d = 5000;
 
        double base_thrust = K_p*z_error + K_i*integral_sum + K_d*(z_error - z_last_error)/60;
 
@@ -398,24 +397,3 @@ int main(int argc, const char** argv) {
 
   return 1;
 }
-
-// int main() {
-//   std::ofstream outfile("/Users/warisz/Code/robasic/data.txt", std::ios::trunc); // Open file in append mode
-//
-//
-//
-//   // Simulate real-time data writing
-//   for (int i = 0; i < 100; ++i) {
-//     if(i%2==0) {
-//       outfile << i << "\n"; // Write data
-//     }
-//     else {
-//       outfile << -i << "\n"; // Write data
-//     }
-//     outfile.flush(); // Ensure data is written immediately
-//     std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Simulate delay
-//   }
-//
-//   outfile.close(); // Close the file
-//   return 0;
-// }
