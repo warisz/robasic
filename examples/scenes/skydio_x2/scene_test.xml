@@ -1,0 +1,38 @@
+<mujoco model="Skydio X2 scene">
+  <include file="x2.xml"/>
+  
+  <!-- Only add absolutely necessary new elements -->
+  <option 
+    gravity="0 0 -9.81"     
+    density="1.225"
+    viscosity="1.8e-5"
+    timestep="0.01"
+    iterations="50"
+    tolerance="1e-10"
+    solver="Newton"/>
+
+  <size memory="50M"/>
+
+  <statistic center="0 0 0.1" extent="0.6" meansize=".05"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/> 
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="-20" elevation="-20" /> 
+    <!--  THE PROBLEM IN SCENE_X2.XML:-->
+          <!-- global ..... ellipsoidinertia="true" -->  </visual>
+
+  <asset>
+    <texture name="groundplane_tex" type="2d" builtin="checker" width="512" height="512" rgb1=".1 .2 .3" rgb2=".2 .3 .4"/>
+    <material name="groundplane" texture="groundplane_tex" texrepeat="1 1" texuniform="true" reflectance=".2"/>
+
+    <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1=".1 .2 .3" rgb2=".2 .3 .4"/>
+    <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="grid"/>
+  </worldbody>
+
+</mujoco>
