@@ -4,9 +4,6 @@ import { OrbitControls    } from '../node_modules/three/examples/jsm/controls/Or
 import { DragStateManager } from './utils/DragStateManager.js';
 import { setupGUI, downloadExampleScenesFolder, loadSceneFromURL, getPosition, getQuaternion, toMujocoPos, standardNormal } from './mujocoUtils.js';
 import   load_mujoco        from '../dist/mujoco_wasm.js';
-// import { EditorView } from '../node_modules/@codemirror/view';
-// import { basicSetup } from '../node_modules/@codemirror/basic-setup';
-// import { javascript } from '../node_modules/@codemirror/lang-javascript';
 
 // Load the MuJoCo Module
 const mujoco = await load_mujoco();
@@ -47,6 +44,9 @@ export class MuJoCoDemo {
     this.updateGUICallbacks = [];
 
     this.container = document.createElement( 'div' );
+    this.container.style.position = 'fixed';
+    this.container.style.right = '0';
+    this.container.style.top = '0';
     document.body.appendChild( this.container );
 
     this.scene = new THREE.Scene();
@@ -66,7 +66,9 @@ export class MuJoCoDemo {
 
     this.renderer = new THREE.WebGLRenderer( { antialias: true } );
     this.renderer.setPixelRatio( window.devicePixelRatio );
-    this.renderer.setSize( window.innerWidth, window.innerHeight );
+    const width = window.innerWidth * 0.6;
+    const height = width * (9/16); // Using 16:9 aspect ratio
+    this.renderer.setSize( width, height );
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
     this.renderer.setAnimationLoop( this.render.bind(this) );
@@ -87,8 +89,8 @@ export class MuJoCoDemo {
     // Initialize the Drag State Manager.
     this.dragStateManager = new DragStateManager(this.scene, this.renderer, this.camera, this.container.parentElement, this.controls);
 
-    // Initialize code editor
-    this.initCodeEditor();
+    // Make initCodeEditor async
+    this.initCodeEditor().catch(console.error);
   }
 
   async init() {
@@ -279,66 +281,52 @@ export class MuJoCoDemo {
     this.renderer.render( this.scene, this.camera );
   }
 
-  initCodeEditor() {
+  async initCodeEditor() {
+    await new Promise(resolve => {
+      require(['vs/editor/editor.main'], resolve);
+    });
+
     // Create editor container
     const editorContainer = document.createElement('div');
     editorContainer.style.position = 'absolute';
-    editorContainer.style.left = '20px';
-    editorContainer.style.top = '20px';
+    editorContainer.style.left = '0px';
+    editorContainer.style.top = '0px';
+    editorContainer.style.width = '75vh';
+    editorContainer.style.height = '90vh'; 
+    editorContainer.style.display = 'flex';
+    editorContainer.style.flexDirection = 'column';
     document.body.appendChild(editorContainer);
 
-    //slider
-    const sliderContainer = document.createElement('div');
-    sliderContainer.innerHTML = `
-        <label for="mySlider">Target Height: </label>
-        <input type="range" id="mySlider" min="1" max="10" value="5" step="1">
-        <span id="sliderValue">5</span>
-    `;
-    sliderContainer.style.marginBottom = '10px';
-    editorContainer.appendChild(sliderContainer);
+    // Create Monaco editor container
+    const monacoContainer = document.createElement('div');
+    monacoContainer.style.width = '100%';
+    monacoContainer.style.height = '100%';
+    editorContainer.appendChild(monacoContainer);
 
-    // Add slider functionality
-    const slider = sliderContainer.querySelector('#mySlider');
-    const sliderValueDisplay = sliderContainer.querySelector('#sliderValue');
-    slider.addEventListener('input', (e) => {
-        this.desired_z = e.target.value;
-        sliderValueDisplay.textContent = e.target.value;
-        // You can access the value in your simulation with:
-        // this.targetHeight = parseFloat(e.target.value);
+    // Initialize Monaco editor
+    this.editor = monaco.editor.create(monacoContainer, {
+        value: this.getDefaultCode(),
+        language: 'javascript',
+        theme: 'vs-dark',
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        fontSize: 14,
+        automaticLayout: true
     });
-
-    // Create textarea
-    this.editor = document.createElement('textarea');
-    this.editor.value = this.getDefaultCode();
-    this.editor.style.width = '400px';
-    this.editor.style.height = '600px';
-    this.editor.style.fontFamily = 'monospace';
-    this.editor.style.fontSize = '14px';
-    this.editor.style.padding = '10px';
-    
-    // Prevent delete key from affecting simulation
-    this.editor.addEventListener('keydown', (e) => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            e.stopPropagation();
-        }
-    });
-    
-    editorContainer.appendChild(this.editor);
 
     // Add Run button
     const runButton = document.createElement('button');
     runButton.textContent = 'Run Code';
-    runButton.style.position = 'absolute';
-    runButton.style.left = '20px';
-    runButton.style.top = '630px';
+    runButton.style.marginTop = '10px';
     runButton.style.padding = '8px 16px';
     runButton.style.backgroundColor = '#4CAF50';
     runButton.style.color = 'white';
     runButton.style.border = 'none';
     runButton.style.borderRadius = '4px';
     runButton.style.cursor = 'pointer';
+    runButton.style.flexShrink = '0';  // Prevent button from shrinking
     runButton.onclick = () => this.runCode();
-    document.body.appendChild(runButton);
+    editorContainer.appendChild(runButton);
   }
 
   getDefaultCode() {
@@ -347,7 +335,7 @@ function controlDrone() {
     // Get current height and target
     const currentHeight = getHeight();
     const targetHeight = 1.5;
-    this.desired_z = targetHeight;
+    setHeight(targetHeight);
 
     // Calculate error
     const error = targetHeight - currentHeight;
@@ -370,8 +358,8 @@ controlDrone();`;
 
   runCode() {
     try {
-      // Get code from textarea
-      const code = this.editor.value;
+      // Get code from Monaco editor
+      const code = this.editor.getValue();
       
       // Create context with available functions
       const context = {
