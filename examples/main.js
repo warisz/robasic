@@ -4,6 +4,7 @@ import { OrbitControls    } from '../node_modules/three/examples/jsm/controls/Or
 import { DragStateManager } from './utils/DragStateManager.js';
 import { setupGUI, downloadExampleScenesFolder, loadSceneFromURL, getPosition, getQuaternion, toMujocoPos, standardNormal } from './mujocoUtils.js';
 import   load_mujoco        from '../dist/mujoco_wasm.js';
+import { loadPyodide}  from '../node_modules/pyodide/pyodide.mjs'
 
 // Load the MuJoCo Module
 const mujoco = await load_mujoco();
@@ -47,6 +48,8 @@ export class MuJoCoDemo {
     this.container.style.position = 'fixed';
     this.container.style.right = '0';
     this.container.style.top = '0';
+    this.container.style.width = '60vw';    // Set container size
+    this.container.style.height = '33.75vw';  // 60 * (9/16) = 33.75
     document.body.appendChild( this.container );
 
     this.scene = new THREE.Scene();
@@ -66,9 +69,11 @@ export class MuJoCoDemo {
 
     this.renderer = new THREE.WebGLRenderer( { antialias: true } );
     this.renderer.setPixelRatio( window.devicePixelRatio );
-    const width = window.innerWidth * 0.6;
-    const height = width * (9/16); // Using 16:9 aspect ratio
-    this.renderer.setSize( width, height );
+    // Use container div dimensions
+    this.renderer.setSize(
+      this.container.clientWidth, //this is the size of the div that holds it 
+      this.container.clientHeight
+  );
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
     this.renderer.setAnimationLoop( this.render.bind(this) );
@@ -286,13 +291,25 @@ export class MuJoCoDemo {
       require(['vs/editor/editor.main'], resolve);
     });
 
+    this.pyodide = await loadPyodide();
+
+    // Expose your JavaScript functions to Python
+    this.pyodide.globals.set('getHeight', () => this.simulation.qpos[2]);
+    this.pyodide.globals.set('setThrust', (value) => {
+      for (let i = 0; i < this.model.nu; i++) {
+        this.simulation.ctrl[i] = value;
+      }
+    });
+    this.pyodide.globals.set('setHeight', (value) => this.desired_z = value);
+
+
     // Create editor container
     const editorContainer = document.createElement('div');
     editorContainer.style.position = 'absolute';
     editorContainer.style.left = '0px';
     editorContainer.style.top = '0px';
-    editorContainer.style.width = '75vh';
-    editorContainer.style.height = '90vh'; 
+    editorContainer.style.width = '40vw';
+    editorContainer.style.height = '95vh'; 
     editorContainer.style.display = 'flex';
     editorContainer.style.flexDirection = 'column';
     document.body.appendChild(editorContainer);
@@ -305,12 +322,12 @@ export class MuJoCoDemo {
 
     // Initialize Monaco editor
     this.editor = monaco.editor.create(monacoContainer, {
-        value: this.getDefaultCode(),
-        language: 'javascript',
+        value: this.getDefaultPythonCode(),
+        language: 'python',
         theme: 'vs-dark',
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
-        fontSize: 14,
+        fontSize: 26,
         automaticLayout: true
     });
 
@@ -329,7 +346,23 @@ export class MuJoCoDemo {
     editorContainer.appendChild(runButton);
   }
 
-  getDefaultCode() {
+  getDefaultPythonCode() {
+    return `# Control the drone's height
+current_height = getHeight()
+target_height = 5.0
+setHeight(target_height);
+
+# Simple P controller
+error = target_height - current_height
+thrust = error * 0.5  # P gain
+
+# Apply thrust (clamped between 0 and 1)
+thrust = max(0, min(1, thrust))
+setThrust(thrust)
+`;
+    }
+
+  getDefaultJSCode() {
     return `// Control the drone using PID
 function controlDrone() {
     // Get current height and target
@@ -356,26 +389,31 @@ function controlDrone() {
 controlDrone();`;
   }
 
-  runCode() {
+  async runCode() {
     try {
       // Get code from Monaco editor
       const code = this.editor.getValue();
       
-      // Create context with available functions
-      const context = {
-        getHeight: () => this.simulation.qpos[2],
-        setThrust: (value) => {
-          for (let i = 0; i < this.model.nu; i++) {
-            this.simulation.ctrl[i] = value;
-          }
-        },
-        setHeight: (value) => this.desired_z = value,
-        console: console
-      };
+      // JS IMPLEMENTATION TO EVAL THE JS CODE
+      // // Create context with available functions
+      // const context = {
+      //   getHeight: () => this.simulation.qpos[2],
+      //   setThrust: (value) => {
+      //     for (let i = 0; i < this.model.nu; i++) {
+      //       this.simulation.ctrl[i] = value;
+      //     }
+      //   },
+      //   setHeight: (value) => this.desired_z = value,
+      //   console: console
+      // };
 
-      // Run the code
-      const runFunction = new Function(...Object.keys(context), code);
-      runFunction(...Object.values(context));
+      // // Run the code
+      // const runFunction = new Function(...Object.keys(context), code);
+      // runFunction(...Object.values(context));
+
+
+      // PYTHON IMPLEMENTATION
+      await this.pyodide.runPython(code);
 
     } catch (error) {
       console.error('Code execution error:', error);
