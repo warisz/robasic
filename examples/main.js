@@ -26,10 +26,21 @@ mujoco.FS.writeFile(
 
 export class MuJoCoDemo {
   constructor() {
+
+    this.appBody = document.getElementById('appbody');
+
+    // Create editor container FIRST
+    this.editorContainer = document.createElement('div');
+    this.editorContainer.style.width = '32vw';
+    this.editorContainer.style.height = '95vh';
+    this.editorContainer.style.borderRight = '1px solid #e0e0e0';
+    this.appBody.appendChild(this.editorContainer);
+
+    // Make initCodeEditor async
+    this.initCodeEditor().catch(console.error);
+    
     this.mujoco = mujoco;
-
     this.desired_z = 3;
-
 
     // Load in the state from XML
     this.model      = new mujoco.Model("/working/" + initialScene);
@@ -44,18 +55,16 @@ export class MuJoCoDemo {
     this.tmpQuat = new THREE.Quaternion();
     this.updateGUICallbacks = [];
 
-    this.container = document.createElement( 'div' );
-    this.container.style.position = 'fixed';
-    this.container.style.right = '0';
-    this.container.style.top = '0';
-    this.container.style.width = '60vw';    // Set container size
-    this.container.style.height = '33.75vw';  // 60 * (9/16) = 33.75
-    document.body.appendChild( this.container );
+    // Then create simulation container
+    this.container = document.createElement('div');
+    this.container.style.width = '40vw';
+    this.container.style.height = '100vh';
+    this.appBody.appendChild(this.container);
 
     this.scene = new THREE.Scene();
     this.scene.name = 'scene';
 
-    this.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.001, 100 );
+    this.camera = new THREE.PerspectiveCamera( 45, this.container.clientWidth / this.container.clientHeight, 0.001, 100 );
     this.camera.name = 'PerspectiveCamera';
     this.camera.position.set(2.0, 1.7, 1.7);
     this.scene.add(this.camera);
@@ -94,8 +103,6 @@ export class MuJoCoDemo {
     // Initialize the Drag State Manager.
     this.dragStateManager = new DragStateManager(this.scene, this.renderer, this.camera, this.container.parentElement, this.controls);
 
-    // Make initCodeEditor async
-    this.initCodeEditor().catch(console.error);
   }
 
   async init() {
@@ -302,23 +309,11 @@ export class MuJoCoDemo {
     });
     this.pyodide.globals.set('setHeight', (value) => this.desired_z = value);
 
-
-    // Create editor container
-    const editorContainer = document.createElement('div');
-    editorContainer.style.position = 'absolute';
-    editorContainer.style.left = '0px';
-    editorContainer.style.top = '0px';
-    editorContainer.style.width = '40vw';
-    editorContainer.style.height = '95vh'; 
-    editorContainer.style.display = 'flex';
-    editorContainer.style.flexDirection = 'column';
-    document.body.appendChild(editorContainer);
-
     // Create Monaco editor container
     const monacoContainer = document.createElement('div');
     monacoContainer.style.width = '100%';
     monacoContainer.style.height = '100%';
-    editorContainer.appendChild(monacoContainer);
+    this.editorContainer.appendChild(monacoContainer);
 
     // Initialize Monaco editor
     this.editor = monaco.editor.create(monacoContainer, {
@@ -327,7 +322,7 @@ export class MuJoCoDemo {
         theme: 'vs-dark',
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
-        fontSize: 26,
+        fontSize: 12,
         automaticLayout: true
     });
 
@@ -343,7 +338,7 @@ export class MuJoCoDemo {
     runButton.style.cursor = 'pointer';
     runButton.style.flexShrink = '0';  // Prevent button from shrinking
     runButton.onclick = () => this.runCode();
-    editorContainer.appendChild(runButton);
+    this.editorContainer.appendChild(runButton);
   }
 
   getDefaultPythonCode() {
@@ -435,3 +430,50 @@ controlDrone();`;
 
 let demo = new MuJoCoDemo();
 await demo.init();
+
+
+
+// file system
+const modules = [
+  { id: 1, name: "Module 1", content: "This is the content for Module 1" },
+  { id: 2, name: "Module 2", content: "This is the content for Module 2" },
+  { id: 3, name: "Module 3", content: "This is the content for Module 3" },
+  { id: 4, name: "Module 4", content: "This is the content for Module 4" },
+]
+
+const sidebar = document.getElementById("sidebar")
+const toggleSidebarBtn = document.getElementById("toggleSidebar")
+const closeSidebarBtn = document.getElementById("closeSidebar")
+const moduleList = document.getElementById("moduleList")
+const moduleName = document.getElementById("moduleName")
+const moduleText = document.getElementById("moduleText")
+
+function toggleSidebar() {
+  sidebar.classList.toggle("open")
+}
+
+function closeSidebar() {
+  sidebar.classList.remove("open")
+}
+
+function selectModule(module) {
+  moduleName.textContent = module.name
+  moduleText.textContent = module.content
+  closeSidebar()
+}
+
+toggleSidebarBtn.addEventListener("click", toggleSidebar)
+closeSidebarBtn.addEventListener("click", closeSidebar)
+
+modules.forEach((module) => {
+  const li = document.createElement("li")
+  const button = document.createElement("button")
+  button.textContent = module.name
+  button.addEventListener("click", () => selectModule(module))
+  li.appendChild(button)
+  moduleList.appendChild(li)
+})
+
+// Initialize with the first module
+selectModule(modules[0])
+
