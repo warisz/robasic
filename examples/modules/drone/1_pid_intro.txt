@@ -1,0 +1,10 @@
+Drones are an amazing way to learn about control algorithms. 
+<br><br>
+A popular algorithm in robotics and engineering in general is PID. PID stands for Proportional, Integral, Derivative. It's an algorithm which uses those three operations to reduce error in your system. 
+<br><br>
+Your system, be it a thermostat or a drone, is looking to reach some sort of target. A thermostat will stabilize to set the temperature a user requests. A drone will stabilize around a height that the user commands.
+<br><br>
+How exactly does this stabilization around this setpoint occur? With a control algorithm, such as PID. 
+<br><br>
+<img src="./examples/modules/images/pid_diagram.png" width="80%">
+

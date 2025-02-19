@@ -21,8 +21,8 @@ body {
 .file-system {
     flex: 0 0 28vw;  /* Don't grow, don't shrink, stay at 20vw */
     height: 100vh;
-    background-color: white;
-    border-right: 1px solid #e0e0e0;
+    background-color: rgb(255, 255, 255);
+    border-right: 1px solid #ffffff;
     position: relative;  /* Add this so sidebar is positioned relative to this */
 }
 
@@ -41,7 +41,7 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    width: 80%;          /* 80% of parent instead of viewport */
+    width: 60%;          /* 60% of parent instead of viewport */
     height: 100%;
     background-color: #f8f8f8;
     transform: translateX(-100%);
