@@ -81,11 +81,10 @@ export class MuJoCoDemo {
     this.renderer.setSize(
       this.container.clientWidth, //this is the size of the div that holds it 
       this.container.clientHeight
-  );
+    );
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
 
-    this.integral_sum = 0;
     this.renderer.setAnimationLoop( this.render.bind(this) );
 
     this.container.appendChild( this.renderer.domElement );
@@ -100,10 +99,14 @@ export class MuJoCoDemo {
     this.controls.update();
 
     //drone params
-    this.desired_z = 5;
+    this.desired_z = 1.5;
+    this.desired_roll = 0;
+    this.desired_pitch = 0;
+    this.desired_yaw = 0;
     this.k_p = 2.5;
     this.k_i = 0.1;
     this.k_d = 2.5;
+    this.integral_sum = 0;
     this.last_z_error = 0;
     this.lastTime = performance.now();
 
@@ -112,6 +115,37 @@ export class MuJoCoDemo {
     // Initialize the Drag State Manager.
     this.dragStateManager = new DragStateManager(this.scene, this.renderer, this.camera, this.container.parentElement, this.controls);
 
+
+      // DRONE KEYBOARD CONTROLS
+      // Add keyboard state tracking
+      this.keyState = {
+          d: false,
+          w: false
+      };
+  
+      // Add event listeners for keydown and keyup
+      window.addEventListener('keydown', (event) => {
+          if (event.key.toLowerCase() === 'd') {
+            console.log('keydown d')
+            this.keyState.d = true;
+          }
+          else if (event.key.toLowerCase() === 'w') {
+            console.log('keydown w')
+            this.keyState.w = true;
+          }
+      });
+  
+      window.addEventListener('keyup', (event) => {
+          if (event.key.toLowerCase() === 'd') {
+            console.log('keyup d')
+            this.keyState.d = false;
+          }
+
+          else if (event.key.toLowerCase() === 'w') {
+            console.log('keyup w')
+            this.keyState.w = false;
+          }
+      });
   }
 
   async init() {
@@ -301,17 +335,53 @@ export class MuJoCoDemo {
     // Calculate derivative term using actual dt
     let derivative = (z_error - this.last_z_error) / dt;
     
-    let thrust = (this.k_p * z_error) + 
+    let throttle = (this.k_p * z_error) + 
                  (this.k_i * this.integral_sum) + 
                  (this.k_d * derivative); 
 
     this.last_z_error = z_error;  // Store error for next frame
-    
+
+
+
+    // ROLL
+    if(this.keyState.d){
+      this.desired_roll = 0.05;
+    }else {
+      this.desired_roll = 0;
+    }
+
+    let k_p_r = 1;
+    let k_i_r = 0.1;
+    let k_d_r = 0.1;
+    let roll_error = this.simulation.qpos[4] - this.desired_roll;
+    let roll = k_p_r*roll_error;
+
+    // PITCH
+    if(this.keyState.w){
+      this.desired_pitch = 0.05;
+    }else {
+      this.desired_pitch = 0;
+    }
+
+    let k_p_p = 1;
+    let k_i_p = 0.1;
+    let k_d_p = 0.1;
+    let pitch_error = this.simulation.qpos[5] - this.desired_pitch;
+    let pitch = k_p_p * pitch_error
+
     // Apply thrust to all motors
-    this.simulation.ctrl[0] = thrust;
-    this.simulation.ctrl[1] = thrust;
-    this.simulation.ctrl[2] = thrust;
-    this.simulation.ctrl[3] = thrust;
+    this.simulation.ctrl[0] = throttle + roll - pitch;
+    this.simulation.ctrl[1] = throttle - roll - pitch;
+    this.simulation.ctrl[2] = throttle - roll + pitch;
+    this.simulation.ctrl[3] = throttle + roll + pitch;
+
+  //   console.log("Position:", 
+  //     this.simulation.qpos[0],  // x (forward/back)
+  //     this.simulation.qpos[1],  // y (left/right)
+  //     this.simulation.qpos[2]); // z (up/down)
+  
+  // // Also log roll to see if it's what we expect
+  // console.log("Roll:", this.simulation.qpos[4]);
 
     // Render!
     this.renderer.render( this.scene, this.camera );
@@ -359,19 +429,45 @@ export class MuJoCoDemo {
         }
     });
 
+    // Create button container for alignment
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-end';  // Right align
+    buttonContainer.style.padding = '0 2px';  // Add some padding on sides of outer container
+    buttonContainer.style.marginTop = '3px';
+
     // Add Run button
     const runButton = document.createElement('button');
     runButton.textContent = 'Run Code';
-    runButton.style.marginTop = '10px';
     runButton.style.padding = '8px 16px';
     runButton.style.backgroundColor = '#4CAF50';
     runButton.style.color = 'white';
     runButton.style.border = 'none';
     runButton.style.borderRadius = '4px';
     runButton.style.cursor = 'pointer';
-    runButton.style.flexShrink = '0';  // Prevent button from shrinking
+    runButton.style.flexShrink = '0';
+    runButton.style.fontFamily = "'JetBrains Mono', monospace";
+    runButton.style.fontSize = '14px';
+    runButton.style.letterSpacing = '0.5px';
+    runButton.style.fontWeight = '500';
+    runButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    runButton.style.transition = 'all 0.2s ease';
+
+    // Add hover effect
+    runButton.onmouseover = () => {
+        runButton.style.backgroundColor = '#45a049';
+        runButton.style.transform = 'translateY(-1px)';
+        runButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+    };
+    runButton.onmouseout = () => {
+        runButton.style.backgroundColor = '#4CAF50';
+        runButton.style.transform = 'translateY(0)';
+        runButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    };
+
     runButton.onclick = () => this.runCode();
-    this.editorContainer.appendChild(runButton);
+    buttonContainer.appendChild(runButton);
+    this.editorContainer.appendChild(buttonContainer);
   }
 
   getDefaultPythonCode() {

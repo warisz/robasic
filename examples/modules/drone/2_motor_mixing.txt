@@ -1,0 +1,7 @@
+Cool, now let's learn how to control the drone to fly in commanded directions. 
+<br>
+<br>
+We will use a popular motor mixing algorithm, which implements PID on every axis. 
+<br>
+
+
