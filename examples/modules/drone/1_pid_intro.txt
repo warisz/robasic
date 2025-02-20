@@ -6,5 +6,9 @@ Your system, be it a thermostat or a drone, is looking to reach some sort of tar
 <br><br>
 How exactly does this stabilization around this setpoint occur? With a control algorithm, such as PID. 
 <br><br>
-<img src="./examples/modules/images/pid_diagram.png" width="80%">
+<div style="text-align: center;">
+    <img src="./examples/modules/images/pid_diagram.png" width="80%">
+</div>
+<br>
 
+Try adjusting the P, I, and D parameters in the code and hit run. Your goal is to hover at a setpoint of 5m. 

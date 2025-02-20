@@ -1,7 +1,7 @@
 // file system
 const modules = [
     { id: 1, name: "Module 1: PID Basics", content_file: "drone/1_pid_intro.txt" },
-    { id: 2, name: "Module 2", content_file: "drone/1_pid_intro.txt" },
+    { id: 2, name: "Module 2: Motor Mixing", content_file: "drone/2_motor_mixing.txt" },
     { id: 3, name: "Module 3", content_file: "drone/1_pid_intro.txt" },
     { id: 4, name: "Module 4", content_file: "drone/1_pid_intro.txt" },
   ]

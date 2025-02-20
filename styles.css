@@ -8,7 +8,7 @@ body {
     align-items: center;
     min-height: 100vh;
     background-color: #f0f0f0;
-    overflow: hidden;
+    overflow: hidden;  /* Keep this to prevent whole page scroll */
 }
 
 /* Three-column layout */
@@ -21,9 +21,18 @@ body {
 .file-system {
     flex: 0 0 28vw;  /* Don't grow, don't shrink, stay at 20vw */
     height: 100vh;
-    background-color: rgb(255, 255, 255);
-    border-right: 1px solid #ffffff;
+    background-color: white;
+    border-right: 1px solid #e0e0e0;
     position: relative;  /* Add this so sidebar is positioned relative to this */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    padding-left: 50px;  /* Add left padding */
+    padding-right: 25px;
+    overflow-y: auto;    /* Enable vertical scrolling by default */
+}
+
+/* When sidebar is open, disable scrolling on file-system */
+.file-system:has(.sidebar.open) {
+  overflow-y: hidden;
 }
 
 #appbody {
@@ -44,15 +53,16 @@ body {
     width: 60%;          /* 60% of parent instead of viewport */
     height: 100%;
     background-color: #f8f8f8;
-    transform: translateX(-100%);
+    transform: translateX(-100%);  /* Push it further left */
     transition: transform 0.3s ease-in-out;
     padding: 1rem;
     box-sizing: border-box;
 }
 
 .sidebar.open {
-    transform: translateX(0);
+    transform: translateX(42px);
 }
+
 
 .icon-button {
     background: none;
@@ -93,5 +103,19 @@ button:hover {
     color: #004499;
 }
 
+/* Style the module titles */
+#moduleName {
+    font-weight: 600;
+    font-size: 1.3em;
+    margin-bottom: 1.2em;
+    color: #1a1a1a;
+}
+
+/* Style the module content */
+#moduleText {
+    font-size: 1em;
+    line-height: 1.7;
+    color: #333;
+}
 
   

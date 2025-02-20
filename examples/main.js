@@ -40,7 +40,6 @@ export class MuJoCoDemo {
     this.initCodeEditor().catch(console.error);
     
     this.mujoco = mujoco;
-    this.desired_z = 3;
 
     // Load in the state from XML
     this.model      = new mujoco.Model("/working/" + initialScene);
@@ -85,6 +84,8 @@ export class MuJoCoDemo {
   );
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+    this.integral_sum = 0;
     this.renderer.setAnimationLoop( this.render.bind(this) );
 
     this.container.appendChild( this.renderer.domElement );
@@ -97,6 +98,14 @@ export class MuJoCoDemo {
     this.controls.dampingFactor = 0.10;
     this.controls.screenSpacePanning = true;
     this.controls.update();
+
+    //drone params
+    this.desired_z = 5;
+    this.k_p = 2.5;
+    this.k_i = 0.1;
+    this.k_d = 2.5;
+    this.last_z_error = 0;
+    this.lastTime = performance.now();
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
 
@@ -124,6 +133,10 @@ export class MuJoCoDemo {
   }
 
   render(timeMS) {
+    const currentTime = performance.now();
+    const dt = (currentTime - this.lastTime) / 1000;  // Convert to seconds
+    this.lastTime = currentTime;
+
     this.controls.update();
 
     if (!this.params["paused"]) {
@@ -282,13 +295,24 @@ export class MuJoCoDemo {
     }
 
     // update drone
-    let error = this.desired_z - this.simulation.qpos[2];
-    let k_p = error*10;
-    this.simulation.ctrl[0] = k_p;
-    this.simulation.ctrl[1] = k_p;
-    this.simulation.ctrl[2] = k_p;
-    this.simulation.ctrl[3] = k_p;
+    let z_error = this.desired_z - this.simulation.qpos[2];
+    this.integral_sum += z_error * dt;
     
+    // Calculate derivative term using actual dt
+    let derivative = (z_error - this.last_z_error) / dt;
+    
+    let thrust = (this.k_p * z_error) + 
+                 (this.k_i * this.integral_sum) + 
+                 (this.k_d * derivative); 
+
+    this.last_z_error = z_error;  // Store error for next frame
+    
+    // Apply thrust to all motors
+    this.simulation.ctrl[0] = thrust;
+    this.simulation.ctrl[1] = thrust;
+    this.simulation.ctrl[2] = thrust;
+    this.simulation.ctrl[3] = thrust;
+
     // Render!
     this.renderer.render( this.scene, this.camera );
   }
@@ -307,6 +331,11 @@ export class MuJoCoDemo {
         this.simulation.ctrl[i] = value;
       }
     });
+    this.pyodide.globals.set('setPID', (k_p, k_i, k_d) => {
+      this.k_p = k_p;
+      this.k_i = k_i;
+      this.k_d = k_d; 
+    });
     this.pyodide.globals.set('setHeight', (value) => this.desired_z = value);
 
     // Create Monaco editor container
@@ -323,7 +352,11 @@ export class MuJoCoDemo {
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         fontSize: 12,
-        automaticLayout: true
+        automaticLayout: true,
+        padding: {
+            top: 30,        // Add padding at the top
+            bottom: 0      // Optional: Add padding at the bottom too
+        }
     });
 
     // Add Run button
@@ -344,16 +377,17 @@ export class MuJoCoDemo {
   getDefaultPythonCode() {
     return `# Control the drone's height
 current_height = getHeight()
+
+######### TODO: Change the params below!
+# PID Controller
+k_p = 2.5
+k_i = 0.1
+k_d = 2.5
+#########
+
+setPID(k_p, k_i, k_d);
 target_height = 5.0
 setHeight(target_height);
-
-# Simple P controller
-error = target_height - current_height
-thrust = error * 0.5  # P gain
-
-# Apply thrust (clamped between 0 and 1)
-thrust = max(0, min(1, thrust))
-setThrust(thrust)
 `;
     }
 
@@ -366,7 +400,7 @@ function controlDrone() {
     setHeight(targetHeight);
 
     // Calculate error
-    const error = targetHeight - currentHeight;
+    const z_error = targetHeight - currentHeight;
     
     // PID gains
     const kp = 1.0;  // Proportional gain
@@ -408,6 +442,7 @@ controlDrone();`;
 
 
       // PYTHON IMPLEMENTATION
+      //reset time
       await this.pyodide.runPython(code);
 
     } catch (error) {
