@@ -63,9 +63,10 @@ export class MuJoCoDemo {
     this.scene = new THREE.Scene();
     this.scene.name = 'scene';
 
-    this.camera = new THREE.PerspectiveCamera( 45, this.container.clientWidth / this.container.clientHeight, 0.001, 100 );
+    this.camera = new THREE.PerspectiveCamera( 75, this.container.clientWidth / this.container.clientHeight, 0.001, 100 );
     this.camera.name = 'PerspectiveCamera';
-    this.camera.position.set(2.0, 1.7, 1.7);
+    this.camera.position.set(2.0, 1.7, 0);
+    this.camera.lookAt(0, 0, 0);
     this.scene.add(this.camera);
 
     this.scene.background = new THREE.Color(0.15, 0.25, 0.35);
@@ -107,7 +108,12 @@ export class MuJoCoDemo {
     this.k_i = 0.1;
     this.k_d = 2.5;
     this.integral_sum = 0;
+    this.roll_integral_sum = 0;
+    this.pitch_integral_sum = 0;
     this.last_z_error = 0;
+    this.last_roll_error = 0;
+    this.last_pitch_error = 0;
+
     this.lastTime = performance.now();
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -120,7 +126,9 @@ export class MuJoCoDemo {
       // Add keyboard state tracking
       this.keyState = {
           d: false,
-          w: false
+          a: false,
+          w: false,
+          s: false
       };
   
       // Add event listeners for keydown and keyup
@@ -128,6 +136,14 @@ export class MuJoCoDemo {
           if (event.key.toLowerCase() === 'd') {
             console.log('keydown d')
             this.keyState.d = true;
+          }
+          else if (event.key.toLowerCase() === 'a') {
+            console.log('keydown a')
+            this.keyState.a = true;
+          }
+          else if (event.key.toLowerCase() === 's') {
+            console.log('keydown s')
+            this.keyState.s = true;
           }
           else if (event.key.toLowerCase() === 'w') {
             console.log('keydown w')
@@ -139,8 +155,14 @@ export class MuJoCoDemo {
           if (event.key.toLowerCase() === 'd') {
             console.log('keyup d')
             this.keyState.d = false;
+          }else if (event.key.toLowerCase() === 'a') {
+            console.log('keyup a')
+            this.keyState.a = false;
           }
-
+          else if (event.key.toLowerCase() === 's') {
+            console.log('keyup s')
+            this.keyState.s = false;
+          }
           else if (event.key.toLowerCase() === 'w') {
             console.log('keyup w')
             this.keyState.w = false;
@@ -328,7 +350,7 @@ export class MuJoCoDemo {
       this.mujocoRoot.spheres  .instanceMatrix.needsUpdate = true;
     }
 
-    // update drone
+    // THROTTLE
     let z_error = this.desired_z - this.simulation.qpos[2];
     this.integral_sum += z_error * dt;
     
@@ -342,32 +364,55 @@ export class MuJoCoDemo {
     this.last_z_error = z_error;  // Store error for next frame
 
 
-
     // ROLL
     if(this.keyState.d){
-      this.desired_roll = 0.05;
-    }else {
+      this.desired_roll = -0.1;
+    }else if(this.keyState.a){
+      this.desired_roll = 0.1
+    }
+    else {
       this.desired_roll = 0;
     }
 
-    let k_p_r = 1;
-    let k_i_r = 0.1;
-    let k_d_r = 0.1;
+    let p_r = 2;
+    let i_r = 0.05;
+    let d_r = 10;
+
+    let vp_r = 0.1;
+    let vi_r = 0.01;
+    let vd_r = 1;
+
     let roll_error = this.simulation.qpos[4] - this.desired_roll;
-    let roll = k_p_r*roll_error;
+    let roll_velocity = this.simulation.qvel[1];  // Get pitch velocity 
+    console.log(roll_velocity)
+
+    this.roll_integral_sum += roll_error * dt 
+    let roll_derivative = (roll_error - this.last_roll_error)/dt
+    let roll = p_r*roll_error + (i_r * this.roll_integral_sum) + (d_r * roll_derivative) - (vp_r * roll_velocity);
+    this.last_roll_error = roll_error;
+
 
     // PITCH
     if(this.keyState.w){
-      this.desired_pitch = 0.05;
+      this.desired_pitch = -0.1;
+    }else if(this.keyState.s){
+      this.desired_pitch = 0.1;
     }else {
       this.desired_pitch = 0;
     }
 
-    let k_p_p = 1;
-    let k_i_p = 0.1;
-    let k_d_p = 0.1;
+    let k_p_p = 1.75;
+    let k_i_p = 0.05;
+    let k_d_p = 8;
+    let k_v_p = 0.1;
     let pitch_error = this.simulation.qpos[5] - this.desired_pitch;
-    let pitch = k_p_p * pitch_error
+    let pitch_velocity = this.simulation.qvel[0];  // Get pitch velocity 
+
+    this.pitch_integral_sum += pitch_error * dt
+    let pitch_derivative = (pitch_error - this.last_pitch_error) / dt
+    let pitch = (k_p_p * pitch_error) + (k_i_p * this.pitch_integral_sum) + (k_d_p * pitch_derivative) + (k_v_p * pitch_velocity);
+
+    this.last_pitch_error = pitch_error
 
     // Apply thrust to all motors
     this.simulation.ctrl[0] = throttle + roll - pitch;
@@ -416,7 +461,6 @@ export class MuJoCoDemo {
 
     // Initialize Monaco editor
     this.editor = monaco.editor.create(monacoContainer, {
-        value: this.getDefaultPythonCode(),
         language: 'python',
         theme: 'vs-dark',
         minimap: { enabled: false },
@@ -429,6 +473,7 @@ export class MuJoCoDemo {
         }
     });
 
+    initializeModules(this.editor);
     // Create button container for alignment
     const buttonContainer = document.createElement('div');
     buttonContainer.style.display = 'flex';
@@ -469,23 +514,6 @@ export class MuJoCoDemo {
     buttonContainer.appendChild(runButton);
     this.editorContainer.appendChild(buttonContainer);
   }
-
-  getDefaultPythonCode() {
-    return `# Control the drone's height
-current_height = getHeight()
-
-######### TODO: Change the params below!
-# PID Controller
-k_p = 2.5
-k_i = 0.1
-k_d = 2.5
-#########
-
-setPID(k_p, k_i, k_d);
-target_height = 5.0
-setHeight(target_height);
-`;
-    }
 
   getDefaultJSCode() {
     return `// Control the drone using PID

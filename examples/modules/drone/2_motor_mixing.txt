@@ -1,7 +1,17 @@
 Cool, now let's learn how to control the drone to fly in commanded directions. 
-<br>
-<br>
 We will use a popular motor mixing algorithm, which implements PID on every axis. 
 <br>
+<br>
+For the four propellers: 
+<br>
+T1 = Throttle + Roll - Pitch + Yaw 
+<br>
+T2 = Throttle - Roll - Pitch - Yaw
+<br>
+T3 = Throttle - Roll + Pitch + Yaw
+<br>
+T4 = Throttle + Roll + Pitch - Yaw
+<br>
+
 
 
